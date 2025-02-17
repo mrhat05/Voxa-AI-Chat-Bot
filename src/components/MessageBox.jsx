@@ -2,8 +2,10 @@ import React from "react";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
+import { useSelector } from "react-redux";
 
 function MessageBox({value, setNewMessage, sendMessage}) {
+  const authStatus = localStorage.getItem("authStatus");
   return (
     <form
       onSubmit={(e)=>{
@@ -52,7 +54,9 @@ function MessageBox({value, setNewMessage, sendMessage}) {
       <Button
         type="submit"
         sx={{
-          background: "linear-gradient(135deg, #2E8BFF, #1E64E2)",
+          background: authStatus
+          ? "linear-gradient(135deg, #2E8BFF, #1E64E2)"
+          : "linear-gradient(135deg, #555, #333)",
           color: "white",
           minWidth: "50px",
           height: "45px",

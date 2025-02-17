@@ -1,44 +1,56 @@
 import React from "react";
-import { FaTimes, FaBars, FaPlus } from "react-icons/fa";
+import { FaBars, FaTimes, FaPlus } from "react-icons/fa";
 
-function Sidebar({ isOpen, toggleSidebar, chats, selectChat, activeChat, addChat }) {
+function Sidebar({ isOpen, toggleSidebar, chats = [], selectChat, addChat, activeChat }) {
   return (
     <>
+      {/* Hamburger Button for Mobile */}
+      <button
+        className="fixed top-5 left-5 z-50 text-white bg-gray-800 p-2 rounded-full md:hidden"
+        onClick={toggleSidebar}
+      >
+        <FaBars />
+      </button>
+
+      {/* Sidebar + Overlay for Mobile */}
       <div
-        className={`fixed top-0 left-0 h-full bg-[#121111] border-r border-[#524f4f] transition-all duration-300
-          ${isOpen ? "w-full sm:w-1/2 md:w-1/5" : "w-0 md:w-1/5"} overflow-hidden z-40 md:relative`}
+        className={`fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity duration-300 ${
+          isOpen ? "opacity-100 visible" : "opacity-0 invisible"
+        } md:hidden`}
+        onClick={toggleSidebar}
+      ></div>
+
+
+      <div
+        className={`fixed top-0 left-0 h-full bg-[#121111] border-r border-[#524f4f] transition-transform duration-300 transform ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        } w-[80%] sm:w-[50%] md:w-[20%] lg:w-[18%] xl:w-[15%] md:translate-x-0 md:relative md:min-w-[250px] z-50`}
       >
         <div className="p-5 text-white flex flex-col h-full">
-          <button className="text-gray-300 text-2xl self-end md:hidden" onClick={toggleSidebar}>
+
+          <button className="text-gray-300 text-2xl self-end md:hidden mb-3" onClick={toggleSidebar}>
             <FaTimes />
           </button>
 
-          <div className="flex items-center justify-between mb-4 md:mt-1 mt-5">
+          {/* Chat List Header */}
+          <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Chats</h2>
-            <button
-              className="text-white bg-blue-500 hover:bg-blue-600 p-2 rounded-full"
-              onClick={() =>{
-                isOpen=true
-                addChat()
-              }}
-            >
+            <button className="text-white bg-blue-500 hover:bg-blue-600 p-2 rounded-full" onClick={addChat}>
               <FaPlus />
             </button>
           </div>
 
-          <div
-            className="flex-grow overflow-y-auto max-h-[75vh]"
-            style={{
-              scrollbarWidth: "thin",
-              scrollbarColor: "#292929 #1a1919",
-            }}
-          >
-            {chats.map((chat, index) => (
+          <div className="flex-grow overflow-y-auto max-h-[75vh]">
+            {chats.map((chat) => (
               <div
-                key={index}
-                className={`p-3 rounded cursor-pointer mb-2 transition-all
-                    ${activeChat === index ? "bg-gray-700 text-white" : "hover:bg-gray-800 text-gray-300"}`}
-                onClick={() => selectChat(index)}
+                key={chat.id}
+                className={`p-3 rounded cursor-pointer mb-2 hover:bg-gray-800 text-gray-300 ${
+                  activeChat === chat.id ? "bg-gray-700" : ""
+                }`}
+                onClick={() => {
+                  selectChat(chat.id);
+                  toggleSidebar();
+                }}
               >
                 {chat.name}
               </div>
@@ -46,17 +58,6 @@ function Sidebar({ isOpen, toggleSidebar, chats, selectChat, activeChat, addChat
           </div>
         </div>
       </div>
-
-      {!isOpen && (
-        <button
-          className="fixed top-4 left-4 z-50 bg-[#2E8BFF] text-white p-3 rounded-full shadow-lg md:hidden"
-          onClick={toggleSidebar}
-        >
-          <FaBars />
-        </button>
-      )}
-
-      {isOpen && <div className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden" onClick={toggleSidebar}></div>}
     </>
   );
 }
