@@ -4,7 +4,6 @@ import { FaBars, FaTimes, FaPlus } from "react-icons/fa";
 function Sidebar({ isOpen, toggleSidebar, chats = [], selectChat, addChat, activeChat }) {
   return (
     <>
-      {/* Hamburger Button for Mobile */}
       <button
         className="fixed top-5 left-5 z-50 text-white bg-gray-800 p-2 rounded-full md:hidden"
         onClick={toggleSidebar}
@@ -12,7 +11,6 @@ function Sidebar({ isOpen, toggleSidebar, chats = [], selectChat, addChat, activ
         <FaBars />
       </button>
 
-      {/* Sidebar + Overlay for Mobile */}
       <div
         className={`fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity duration-300 ${
           isOpen ? "opacity-100 visible" : "opacity-0 invisible"
@@ -41,20 +39,21 @@ function Sidebar({ isOpen, toggleSidebar, chats = [], selectChat, addChat, activ
           </div>
 
           <div className="flex-grow overflow-y-auto max-h-[75vh]">
-            {chats.map((chat) => (
-              <div
-                key={chat.id}
-                className={`p-3 rounded cursor-pointer mb-2 hover:bg-gray-800 text-gray-300 ${
-                  activeChat === chat.id ? "bg-gray-700" : ""
-                }`}
-                onClick={() => {
-                  selectChat(chat.id);
-                  toggleSidebar();
-                }}
-              >
-                {chat.name}
-              </div>
-            ))}
+          {chats.slice().reverse().map((chat, ind) => (
+  <div
+    key={ind}
+    className={`p-3 rounded cursor-pointer mb-2 hover:bg-gray-800 text-gray-300 ${
+      activeChat === chat.$id ? "bg-gray-700" : ""
+    }`}
+    onClick={() => {
+      selectChat(chat.$id);
+      toggleSidebar();
+    }}
+  >
+    {`New Chat ${chats.length-ind}`}
+  </div>
+))}
+
           </div>
         </div>
       </div>
