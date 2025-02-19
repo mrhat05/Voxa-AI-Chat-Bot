@@ -1,10 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Sidebar from "../components/Sidebar.jsx";
 import { logout } from "../store/authSlice";
 import LLMSelector from "../components/LLMSelector.jsx";
-import UserMessage from "../components/UserMessage.jsx";
-import ModelMessage from "../components/ModelMessage.jsx";
 import MessageBox from "../components/MessageBox.jsx";
 import AccountBtn from "../components/AccountBtn.jsx";
 import authService from "../appwrite/auth";
@@ -12,6 +10,8 @@ import { useDispatch } from "react-redux";
 import AuthBtns from "../components/AuthBtns.jsx";
 import appwriteService from "../appwrite/database.js";
 import CircularLoader from "../components/CircularLoader.jsx";
+import model from "../lib/gemini.js"
+import Chat from '../components/Chat.jsx'
 
 function Start() {
   const navigate = useNavigate();
@@ -23,10 +23,25 @@ function Start() {
   const [chats, setChats] = useState([]);
   const [messages, setMessages] = useState({});
   const [newMessage, setNewMessage] = useState("");
+  const [aiResponse,setAiResponse]=useState("")
   const [selectedModel, setSelectedModel] = useState("GPT-3.5");
   const models = ["GPT-3.5", "Llama 2", "Mistral 7B"];
   const [loader,setLoader] = useState(false);
   const [loader2,setLoader2] = useState(false);
+  const [chatIdState,setChatIdState]=useState(chatId)
+  const [activeChat,setActiveChat]=useState(chatIdState)
+  const chatRef = useRef(null);
+  // const {currMsgs,setCurrMsgs}=useState([])
+
+  const scrollToBottom = () => {
+    if (chatRef.current) {
+      chatRef.current.scrollTop = chatRef.current.scrollHeight;
+    }
+  };
+
+  useEffect(()=>{
+    setActiveChat(chatIdState)
+  },[chatIdState])
 
   useEffect(() => {
     if (!userData) return;
@@ -38,14 +53,18 @@ function Start() {
       if (response ) {
         setChats(response);
         let loadedMessages = {};
-        response.forEach((chat) => {
-          loadedMessages[chat.$id] = chat.messages || [];
+        response.forEach((chat,ind) => {
+          let currChatId=chat.$id
+          loadedMessages[currChatId] = chat.messages || [];
+          if(ind==response.length-1){
+            setChatIdState(currChatId)
+            navigate(`/chat/${currChatId}`)
+          }
         });
-        
         setMessages(loadedMessages);
       }
     });
-    setLoader(false);
+    setLoader(false)
   }
   fetchData()
   }, []);
@@ -59,6 +78,7 @@ function Start() {
       setChats([...chats,newChat]);
       setMessages((prev) => ({[newChat.$id]: [], ...prev }));
       navigate(`/chat/${newChat.$id}`);
+      setActiveChat(newChat.$id)
     }
     setLoader2(false);
   };
@@ -66,19 +86,48 @@ function Start() {
   const sendMessage = async () => {
     if (!userData || !newMessage.trim()) return;
 
+
     let chatIdToUse = chatId;
     const timestamp = Date.now();
+    const prompt = newMessage;
+
+    const chat = model.startChat();
+    let result = await chat.sendMessageStream(prompt);
+
+    let accumulatedText = "";
+
+    let updatedMessages = [...(messages[chatIdToUse] || [])];
+
     const newChatMessage = {
-        userMessage: newMessage,
-        modelMessage: "Thinking...",
+        userMessage: prompt,
+        modelMessage: "",
         timestamp,
     };
 
+    updatedMessages.push(newChatMessage);
+    setMessages((prev) => ({ ...prev, [chatIdToUse]: updatedMessages }));
+    setNewMessage(""); 
+
+    for await (const chunk of result.stream) {
+        const chunkText = chunk.text();
+        accumulatedText += chunkText;
+
+        updatedMessages[updatedMessages.length - 1] = {
+            ...updatedMessages[updatedMessages.length - 1],
+            modelMessage: accumulatedText,
+        };
+
+        setMessages((prev) => ({ ...prev, [chatIdToUse]: [...updatedMessages] }));
+        setAiResponse(accumulatedText);
+    }
+
+    setMessages((prev) => ({ ...prev, [chatIdToUse]: [...updatedMessages] }));
+
     if (chats.length === 0) {
-        const newChat = await appwriteService.createChat(userData.userID, [newChatMessage]);
+        const newChat = await appwriteService.createChat(userData.userID, updatedMessages);
         if (newChat) {
             setChats([newChat, ...chats]);
-            setMessages((prev) => ({ ...prev, [newChat.$id]: [newChatMessage] }));
+            setMessages((prev) => ({ ...prev, [newChat.$id]: updatedMessages }));
             chatIdToUse = newChat.$id;
             navigate(`/chat/${newChat.$id}`);
         } else {
@@ -86,22 +135,8 @@ function Start() {
             return;
         }
     } else {
-        const updatedMessages = [...(messages[chatIdToUse] || []), newChatMessage];
-        setMessages((prev) => ({
-            ...prev,
-            [chatIdToUse]: updatedMessages,
-        }));
-
-        setChats((prev) =>
-            prev.map((chat) =>
-                chat.$id === chatIdToUse ? { ...chat, messages: updatedMessages } : chat
-            )
-        );
-
         await appwriteService.updateChat(chatIdToUse, userData.userID, updatedMessages);
     }
-
-    setNewMessage("");
 };
 
 
@@ -125,23 +160,26 @@ function Start() {
     ):(
     <div className="h-screen flex bg-darkCol3 overflow-hidden">
       {
-        loader2 ?(
+        loader2 ?
           <div className={`fixed top-0 left-0 h-full bg-[#121111] border-r border-[#524f4f] transition-transform duration-300 transform w-[80%] sm:w-[50%] md:w-[20%] lg:w-[18%] xl:w-[15%] md:translate-x-0 md:relative md:min-w-[250px] z-50`}>
             <div className="flex items-center justify-center h-full">
             <CircularLoader />
             </div>
           </div>
-        ):(
+        :(
           <Sidebar
           isOpen={sidebarOpen}
           toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
           chats={chats}
           selectChat={(id) => {
             navigate(`/chat/${id}`);
+            setActiveChat(id)
             setSidebarOpen(false);
           }}
           addChat={addChat}
-          activeChat={chatId}
+          activeChat={activeChat}
+          setActiveChat={setActiveChat}
+          scrollToBottom={scrollToBottom}
         />
   
         )
@@ -161,31 +199,7 @@ function Start() {
         )}
 
         <div className="flex flex-col flex-grow pt-20 px-4 py-6 mx-5">
-          <div
-            className="flex-grow overflow-y-auto custom-scrollbar p-10 mt-auto"
-            style={{
-              minHeight: "500px",
-              maxHeight: "73vh",
-              scrollbarWidth: "thin",
-              scrollbarColor: "#4B5563 #1F2937",
-            }}
-          >
-            {chatId && messages[chatId]?.length > 0 ? (
-              <div className="flex flex-col">
-                {messages[chatId].map((msg, index) => (
-                  <div key={index}>
-                    <UserMessage message={msg.userMessage} />
-                    <ModelMessage message={msg.modelMessage} />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center text-gray-400 gap-5 h-full">
-                <h2 className="text-2xl font-semibold">What can I help with?</h2>
-                {!authStatus && <h3 className="text-sm text-blue-500 font-medium">Login or Signup to start chatting</h3>}
-              </div>
-            )}
-          </div>
+          <Chat chatId={chatId} messages={messages} newMessage={newMessage} aiResponse={aiResponse}  authStatus={authStatus} ref={chatRef}/>
 
           <div className="mt-auto flex justify-center">
             <MessageBox value={newMessage} setNewMessage={setNewMessage} sendMessage={sendMessage} />

@@ -1,7 +1,7 @@
 import React from "react";
 import { FaBars, FaTimes, FaPlus } from "react-icons/fa";
 
-function Sidebar({ isOpen, toggleSidebar, chats = [], selectChat, addChat, activeChat }) {
+function Sidebar({ isOpen, toggleSidebar, chats = [], selectChat, addChat, activeChat,setActiveChat,scrollToBottom}) {
   return (
     <>
       <button
@@ -30,7 +30,6 @@ function Sidebar({ isOpen, toggleSidebar, chats = [], selectChat, addChat, activ
             <FaTimes />
           </button>
 
-          {/* Chat List Header */}
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Chats</h2>
             <button className="text-white bg-blue-500 hover:bg-blue-600 p-2 rounded-full" onClick={addChat}>
@@ -46,6 +45,7 @@ function Sidebar({ isOpen, toggleSidebar, chats = [], selectChat, addChat, activ
       activeChat === chat.$id ? "bg-gray-700" : ""
     }`}
     onClick={() => {
+      scrollToBottom()
       selectChat(chat.$id);
       toggleSidebar();
     }}
