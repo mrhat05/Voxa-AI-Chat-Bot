@@ -5,6 +5,10 @@ import ModelMessage from "./ModelMessage";
 const Chat = forwardRef(({ chatId, messages, newMessage, aiResponse, authStatus }, ref) => {
   const chatContainerRef = useRef(null);
 
+  useEffect(()=>{
+    chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+
+  })
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;

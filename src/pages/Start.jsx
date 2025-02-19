@@ -25,7 +25,7 @@ function Start() {
   const [newMessage, setNewMessage] = useState("");
   const [aiResponse,setAiResponse]=useState("")
   const [selectedModel, setSelectedModel] = useState("GPT-3.5");
-  const models = ["GPT-3.5", "Llama 2", "Mistral 7B"];
+  const models = ["Gemini"];
   const [loader,setLoader] = useState(false);
   const [loader2,setLoader2] = useState(false);
   const [chatIdState,setChatIdState]=useState(chatId)
