@@ -62,7 +62,6 @@ export class databaseService {
                     Query.equal('user_id', userID)
                 ]
             );
-            console.log(response);
             let docs=response.documents;
             docs.forEach(element => {
                 let newMessages=[];
