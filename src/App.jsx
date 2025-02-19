@@ -4,11 +4,13 @@ import Start from "./pages/Start";
 import Login  from "./pages/Login"
 import SignUp from "./pages/Signup";
 import Protected from "./components/AuthLayout";
+import Account from './pages/Account'
 
 function App() {
   return (
     <Router>
       <Routes>
+        <Route path="/account" element={<Protected authentication={true}><Account /></Protected>} />
         <Route path="/" element={<Navigate to="/chat" replace />} />
         <Route path="/chat" element={<Start />} />
         <Route path="/chat/:chatId" element={<Start />} />
