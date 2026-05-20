@@ -13,6 +13,24 @@ import CircularLoader from "../components/CircularLoader.jsx";
 import { sendMessageStreamWithFallback } from "../lib/gemini.js"
 import Chat from '../components/Chat.jsx'
 
+const formatGeminiError = (error) => {
+  const message = error?.message || "";
+
+  if (message.includes("[429") || message.toLowerCase().includes("quota exceeded")) {
+    const retryMatch = message.match(/retry in\s+([\d.]+)s/i);
+    const retrySeconds = retryMatch ? Math.ceil(Number(retryMatch[1])) : null;
+    const retryHint = retrySeconds ? ` Please retry in about ${retrySeconds} seconds.` : " Please retry after a short wait.";
+
+    return `Gemini API quota/rate limit reached.${retryHint} If this keeps happening, check the API key project billing and quota limits in Google AI Studio.`;
+  }
+
+  if (message.includes("[404") || message.includes("is not found for API version")) {
+    return "The selected Gemini model is unavailable for this API key/version. Try a different model in your configuration.";
+  }
+
+  return "Something went wrong while contacting Gemini. Please try again.";
+};
+
 function Start() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -90,16 +108,6 @@ function Start() {
     let chatIdToUse = chatId;
     const timestamp = Date.now();
     const prompt = newMessage;
-
-    let result;
-    try {
-      const response = await sendMessageStreamWithFallback(prompt);
-      result = response.result;
-    } catch (error) {
-      console.error("Gemini streaming failed", error);
-      return;
-    }
-
     let accumulatedText = "";
 
     let updatedMessages = [...(messages[chatIdToUse] || [])];
@@ -112,7 +120,34 @@ function Start() {
 
     updatedMessages.push(newChatMessage);
     setMessages((prev) => ({ ...prev, [chatIdToUse]: updatedMessages }));
-    setNewMessage(""); 
+    setNewMessage("");
+
+    let result;
+    try {
+      const response = await sendMessageStreamWithFallback(prompt);
+      result = response.result;
+    } catch (error) {
+      console.error("Gemini streaming failed", error);
+
+      updatedMessages[updatedMessages.length - 1] = {
+        ...updatedMessages[updatedMessages.length - 1],
+        modelMessage: formatGeminiError(error),
+      };
+
+      setMessages((prev) => ({ ...prev, [chatIdToUse]: [...updatedMessages] }));
+
+      if (chats.length === 0) {
+        const newChat = await appwriteService.createChat(userData.userID, updatedMessages);
+        if (newChat) {
+          setChats([newChat, ...chats]);
+          setMessages((prev) => ({ ...prev, [newChat.$id]: updatedMessages }));
+          navigate(`/chat/${newChat.$id}`);
+        }
+      } else {
+        await appwriteService.updateChat(chatIdToUse, userData.userID, updatedMessages);
+      }
+      return;
+    }
 
     for await (const chunk of result.stream) {
         const chunkText = chunk.text();
