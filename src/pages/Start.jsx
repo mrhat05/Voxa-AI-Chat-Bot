@@ -10,7 +10,7 @@ import { useDispatch } from "react-redux";
 import AuthBtns from "../components/AuthBtns.jsx";
 import appwriteService from "../appwrite/database.js";
 import CircularLoader from "../components/CircularLoader.jsx";
-import model from "../lib/gemini.js"
+import { sendMessageStreamWithFallback } from "../lib/gemini.js"
 import Chat from '../components/Chat.jsx'
 
 function Start() {
@@ -24,7 +24,7 @@ function Start() {
   const [messages, setMessages] = useState({});
   const [newMessage, setNewMessage] = useState("");
   const [aiResponse,setAiResponse]=useState("")
-  const [selectedModel, setSelectedModel] = useState("GPT-3.5");
+  const [selectedModel, setSelectedModel] = useState("Gemini");
   const models = ["Gemini"];
   const [loader,setLoader] = useState(false);
   const [loader2,setLoader2] = useState(false);
@@ -91,8 +91,14 @@ function Start() {
     const timestamp = Date.now();
     const prompt = newMessage;
 
-    const chat = model.startChat();
-    let result = await chat.sendMessageStream(prompt);
+    let result;
+    try {
+      const response = await sendMessageStreamWithFallback(prompt);
+      result = response.result;
+    } catch (error) {
+      console.error("Gemini streaming failed", error);
+      return;
+    }
 
     let accumulatedText = "";
 
